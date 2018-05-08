@@ -127,7 +127,7 @@ mAuthnHelper.getTokenExp(Constant.APP_ID, Constant.APP_KEY,
 **原型**
 
 ```java
-public AuthnHelper (Context context)
+public static AuthnHelper getInstance(Context context)
 ```
 
 </br>
@@ -140,28 +140,26 @@ public AuthnHelper (Context context)
 
 </br>
 
-## 2.2. 预取号
+## 2.2. 取号
 
 ### 2.2.1. 方法描述
 
 **功能**
 
-使用SDK登录前，可以通过预取号方法提前获取用户信息并缓存。用户使用一键登录时，会优先使用缓存的信息快速请求SDK服务端获取`token`和`用户ID(openID)`等信息，提高登录速度。缓存的有效时间是5min并且只能使用一次。预取号成功后，如果用户成功进入授权页，但未授权给应用（未点一键登录按钮），并返回到上一级页面，预取号缓存将失效，预取号缓存失效后，用户再次使用显式登录时，将使用常规流程获取token信息。**注：预取号方法仅对显式登录有效。**
+本方法用于发起取号请求，并返回用户当前网络环境是否具备取号条件。SDK将在后台完成网络判断、数据网络切换等内部操作并向网关请求申请获取用户本机号码。取号请求成功后，开发者就可以调用并弹出由开发者自定义布局的授权页面。**注意：取号请求前，开发者需提前申请`READ_PHONE_STATE`权限，否则取号会失败！**
 
-**注意：预取号前，开发者需提前申请`READ_PHONE_STATE`权限，否则预取号会失败！**
+**调用建议**
+
+建议开发者在用户打开应用时调用本方法，有助于提升登录的成功率和用户登录体验。
 
 </br>
-
-**方法调用逻辑**
-
-![](image/pre_process.png)
 
 **原型**
 
 ```java
-public void umcLoginPre(final String appId, 
-            final String appKey,
-            final TokenListener listener)
+public void getPhoneInfo(final String appId, 
+                         final String appKey, 
+                         final TokenListener listener)
 ```
 
 </br>
@@ -182,10 +180,11 @@ public void umcLoginPre(final String appId,
 
 OnGetTokenComplete的参数JSONObject，含义如下：
 
-| 字段         | 类型      | 含义                                 |
-| ---------- | ------- | ---------------------------------- |
-| resultCode | Int     | 接口返回码，“103000”为成功。具体返回码见4.1 SDK返回码 |
-| desc       | boolean | 成功标识，true为成功。                      |
+| 字段          | 类型   | 含义                                                  |
+| ------------- | ------ | ----------------------------------------------------- |
+| resultCode    | String | 接口返回码，“103000”为成功。具体返回码见4.1 SDK返回码 |
+| desc          | String | 成功标识，true为成功。                                |
+| securityPhone | String | 手机号码掩码，如“138XXXX0000”                         |
 
 </br>
 
@@ -194,17 +193,22 @@ OnGetTokenComplete的参数JSONObject，含义如下：
 **请求示例代码**
 
 ```java
-mAuthnHelper.umcLoginPre(Constant.APP_ID, 
-        Constant.APP_KEY,
-        mListener);
+mAuthnHelper.getPhoneInfo(APP_ID, APP_KEY, new TokenListener() {
+    @Override
+    public void onGetTokenComplete(JSONObject jsonobj) {
+        // do something
+    }
+}
+);
 ```
 
 **响应示例代码**
 
 ```
 {
-    "resultCode": "103000",
-    "desc": "true",
+	"resultCode":"103000",
+	"desc":"true",
+	"securityPhone:"138XXXX0000"
 }
 ```
 
@@ -214,29 +218,21 @@ mAuthnHelper.umcLoginPre(Constant.APP_ID,
 
 **功能**
 
-显式登录即一键登录，本方法用于实现**获取用户信息**功能。使用本方法获取到的token，可通过`获取用户信息接口`交换用户信息。</br>
+本方法用于实现包括：
 
-**交互过程**
-
-SDK自动弹出登录缓冲界面（图一，<font  style="color:blue; font-style:italic;">预取号成功将不会弹出缓冲页</font>），若取号成功，自动切换到授权登录页面（图二），用户授权登录后，即可使用本机号码进行登录；若用户获取本机号码失败，自动跳转到短信验证码登录页面（图三，<font  style="color:blue; font-style:italic;">开发者可以选择是否跳到SDK提供的短信验证页面</font>），引导用户使用短信验证码登录。**注意：应用不得通过任何技术手段，在获取用户手机号码的登录过程中，将登录授权界面（图二）隐去，一旦发现有非正常调用行为，我方为了保护用户隐私，有义务下线应用的登录能力。**
-
-![](image/20.png)
-
-用户授权登录后，统一认证平台将`token`和`用户ID(openID)`等信息返回到应用服务端。 
-
-**方法调用逻辑**
-
-![](image/ext_process.png)
+1. 加载应用提供的授权页面activity；
+2. 用户点击授权登录后的实现逻辑；
+3. 授权返回结果
 
 </br>
 
 **原型**
 
 ```java
-public void getTokenExp(final String appId, 
-            final String appKey,
-            final String authType, 
-            final TokenListener listener)
+public void loginAuth(Activity activity, 
+                      String appId, 
+                      String appKey, 
+                      @NonNull LoginCallback callback)
 ```
 
 </br>
@@ -245,37 +241,52 @@ public void getTokenExp(final String appId,
 
 **请求参数**
 
-| 参数        | 类型            | 说明                                       |
-| :-------- | :------------ | :--------------------------------------- |
-| appId     | String        | 应用的AppID                                 |
-| appkey    | String        | 应用密钥                                     |
-| loginType | String        | 登录类型，AuthnHelper.UMC_LOGIN_DISPLAY       |
-| authType  | String        | 认证类型，目前支持网关鉴权、短验和短信上行，网关鉴权是默认必选认证类型，短验和短信上行是开发者可选认证:</br>1.短信验证码：AuthnHelper.AUTH_TYPE_DYNAMIC_SMS</br>2.短信上行：AuthnHelper.AUTH_TYPE_SMS</br> 参数为空时，默认只选择网关鉴权方式取号 |
-| listener  | TokenListener | TokenListener为回调监听器，是一个java接口，需要调用者自己实现；TokenListener是接口中的认证登录token回调接口，OnGetTokenComplete是该接口中唯一的抽象方法，即void OnGetTokenComplete(JSONObject  jsonobj) |
+| 参数     | 类型          | 说明                                          |
+| :------- | :------------ | :-------------------------------------------- |
+| appId    | String        | 应用的AppID                                   |
+| appkey   | String        | 应用密钥                                      |
+| activity | Activity      | 授权页面，由开发者完成页面的设计布局          |
+| callback | LoginCallback | LoginCallback认证回调接口，需要调用者自己实现 |
 
-**`authType`参数说明：**
+LoginCallback认证回调接口：
 
-1. 开发者可单独选择其中一种认证类型，也可以用“+”号组合同时使用三种认证类型，**SDK登录认证优先级顺序为：网关取号 → 短信上行 → 短信验证码**。示例：`AuthnHelper.AUTH_TYPE_SMS + AuthnHelper.AUTH_TYPE_DYNAMIC_SMS`
-2. 一键登录（网关取号）失败后，将自动使用短信上行取号能力（如果`authType`参数包含短信上行能力），从网关取号切换到短信上行取号**需要用户发送短信权限**，取得权限后，切换过程无感知
-3. 网关取号和短信上行均失败时，将自动跳转到短信验证码页面（如果`authType`参数包含短验能力）
-4. 若开发者仅使用网关鉴权（`authType`为null），一键登录失败后，返回相应的错误码
-5. 如果开发者需要自定义短验页面，`authType`参数不能包含短信验证码能力；
-6. 如果开发者在授权页面布局中未隐藏“切换账号”按钮，用户点击按钮时，仍然会跳转到SDK自带的短验页面，因此，开发者如果完全不想使用SDK自带的短验功能，建议把“切换账号”隐藏。
+```java
+public interface LoginCallback {
+
+    /**
+     * 设置点击授权按钮事件监听器
+     *
+     */
+    void setLoginViewClickedListener(View.OnClickListener listener);
+    
+
+    /**
+     * 授权登录成功
+     *
+     */
+    void loginSuccess(String token, JSONObject responseData);
+
+    
+    /**
+     * 授权登录失败
+     *
+     */
+    void loginError(int errorCode, String errorMsg, JSONObject responseData);
+
+}
+```
 
 </br>
 
 **响应参数**
 
-OnGetTokenComplete的参数JSONObject，含义如下：
+LoginCallback的参数JSONObject，含义如下：
 
-| 字段          | 类型     | 含义                                       |
-| ----------- | ------ | ---------------------------------------- |
-| resultCode  | Int    | 接口返回码，“103000”为成功。具体响应码见4.1 SDK返回码       |
-| resultDesc  | String | 失败时返回：返回错误码说明                            |
-| authType    | String | 认证类型：0:其他；</br>1:WiFi下网关鉴权；</br>2:网关鉴权；</br>3:短信上行鉴权；</br>7:短信验证码登录 |
-| authTypeDec | String | 认证类型描述，对应authType                        |
-| token       | String | 成功时返回：临时凭证，token有效期2min，一次有效；同一用户（手机号）10分钟内获取token且未使用的数量不超过30个 |
-| openId      | String | 成功时返回：用户身份唯一标识                           |
+| 字段       | 类型   | 含义                                                         |
+| ---------- | ------ | ------------------------------------------------------------ |
+| resultCode | String | 接口返回码，“103000”为成功。具体响应码见4.1 SDK返回码        |
+| token      | String | 成功时返回：临时凭证，token有效期2min，一次有效；同一用户（手机号）10分钟内获取token且未使用的数量不超过30个 |
+| openId     | String | 成功时返回：用户身份唯一标识                                 |
 
 </br>
 
@@ -284,18 +295,34 @@ OnGetTokenComplete的参数JSONObject，含义如下：
 **请求示例代码**
 
 ```java
-mAuthnHelper.getTokenExp(Constant.APP_ID, Constant.APP_KEY,
-                 AuthnHelper.AUTH_TYPE_DYNAMIC_SMS + AuthnHelper.AUTH_TYPE_SMS, mListener);
+mAuthnHelper.loginAuth(activity, APP_ID, APP_KEY, new LoginCallback() {
+@Override
+    public void setLoginViewClickedListener(View.OnClickListener listener) {
+        // do something
+    }
+
+
+    @Override
+	public void loginSuccess(String token, JSONObject responseData) {
+        // do something
+    }
+
+    
+    @Override
+    public void loginError(int errorCode, String errorMsg, JSONObject responseData) 	{
+        // do something
+    }
+}
+);
 ```
 
 **响应示例代码**
 
 ```
 {
-    "authType": "网关鉴权",
-    "resultCode": "103000",
-    "openId": "9M7RaoZH1DUrJ15ZjJkctppraYpoNKQW9xKtQrcmCGTFONUKeT3w",
-    "token": "848401000133020037515451304E7A497A4D7A5A4651554A474E6A41784D304E4640687474703A2F2F3231312E3133362E31302E3133313A383038302F403031030004051C7840040012383030313230313730373230313030303137050010694969C667EA4D248DFA125D7C4BD35BFF00207EF179935851E1578B313B366007126A3FD3667BCD2B812EC2D084B8924E7164"
+	"resultcode": "103000",
+    "token": "STsid0000001512438403572hxxxxgBwiYc9fIwxxxxdI4X3GMkI5UVw", 
+    "openId": "003Jxxxx1rmApSg6yG0ydxxxWZ4Bnx0rb4wtWxxxxxc0WAWoAxxx"
 }
 ```
 
@@ -307,22 +334,16 @@ mAuthnHelper.getTokenExp(Constant.APP_ID, Constant.APP_KEY,
 
 **功能**
 
-本方法目前只能用于实现**本机号码校验**功能。开发者通过隐式登录方法，无授权弹窗，可获取到token和openID（需在开放平台勾选相关能力），应用服务端凭token向SDK服务端请求校验是否本机号码。隐式取号失败后，不支持短信上行和短信验证码二次验证。注：隐式登录返回的token无法通过`获取用户信息接口`换取手机号码，只支持通过`本机号码校验接口`校验用户手机号码身份，否则会报错。
-
-**注意：隐式登录前，开发者需提前申请`READ_PHONE_STATE`权限，否则会失败！**
+本方法目前只能用于实现**本机号码校验**功能。开发者通过隐式登录方法，无授权弹窗，可获取到token和openID（需在开放平台勾选相关能力），应用服务端凭token向SDK服务端请求校验是否本机号码。隐式取号失败后，不支持短信上行和短信验证码二次验证。注：隐式登录返回的token无法通过`获取用户信息接口`换取手机号码，只支持通过`本机号码校验接口`校验用户手机号码身份，否则会报错。**注意：隐式登录前，开发者需提前申请`READ_PHONE_STATE`权限，否则会失败！**
 
 </br>
-
-**方法调用逻辑**
-
-![](image/imp_process.png)
 
 **原型**
 
 ```java
-public void getTokenImp(final String appId, 
-            final String appKey,
-            final TokenListener listener)
+public void getTokenImp(final String appId,
+                        final String appKey,
+                        final TokenListener listener)
 ```
 
 </br>
@@ -343,13 +364,11 @@ public void getTokenImp(final String appId,
 
 OnGetTokenComplete的参数JSONObject，含义如下：
 
-| 字段          | 类型     | 含义                                       |
-| ----------- | ------ | ---------------------------------------- |
-| resultCode  | Int    | 接口返回码，“103000”为成功。具体响应码见4.1 SDK返回码       |
-| authType    | Int    | 登录类型。                                    |
-| authTypeDes | String | 登录类型中文描述。                                |
-| openId      | String | 用户身份唯一标识（参数需在开放平台勾选相关能力后开放，如果勾选了一键登录能力，使用本方法时，不返回OpenID） |
-| token       | String | 成功返回:临时凭证，token有效期2min，一次有效，同一用户（手机号）10分钟内获取token且未使用的数量不超过30个 |
+| 字段       | 类型   | 含义                                                         |
+| ---------- | ------ | ------------------------------------------------------------ |
+| resultCode | Int    | 接口返回码，“103000”为成功。具体响应码见4.1 SDK返回码        |
+| openId     | String | 用户身份唯一标识                                             |
+| token      | String | 成功返回:临时凭证，token有效期2min，一次有效，同一用户（手机号）10分钟内获取token且未使用的数量不超过30个 |
 
 </br>
 
@@ -358,7 +377,13 @@ OnGetTokenComplete的参数JSONObject，含义如下：
 **请求示例代码**
 
 ```java
-mAuthnHelper.getTokenImp(Constant.APP_ID, Constant.APP_KEY,mListener);
+mAuthnHelper.getTokenImp(APP_ID, APP_KEY, new TokenListener() {
+    @Override
+    public void onGetTokenComplete(JSONObject jsonobj) {
+        // do something
+    }
+}
+);
 ```
 
 **响应示例代码**
@@ -366,10 +391,8 @@ mAuthnHelper.getTokenImp(Constant.APP_ID, Constant.APP_KEY,mListener);
 ```
 {
     "resultCode": "103000",
-    "authType": "2",
-    "authTypeDes": "网关鉴权",
-    "openId": "003JI1Jg1rmApSg6yG0ydUgLWZ4Bnx0rb4wtWLtyDRc0WAWoAUmE",
-    "token": "STsid0000001512438403572hQSEygBwiYc9fIw0vExdI4X3GMkI5UVw",
+    "openId": "003JI1xxxxxApSg6yG0xxxxxxZ4Bnx0rb4wtWLtyDRc0WAWoAUmE",
+    "token": "STsid0000001512438403572hQSEygBwiYc9fIw0vExdI4X3GMkI5UVw"
 }
 ```
 
@@ -379,12 +402,12 @@ mAuthnHelper.getTokenImp(Constant.APP_ID, Constant.APP_KEY,mListener);
 
 ###2.5.1. 方法描述
 
-设置取号超时时间，默认为8秒，应用在预取号、隐式登录阶段时，如果需要更改超时时间，可使用该方法配置。
+设置取号超时时间，默认为8秒，适用于取号和隐式登录阶段。建议配置值2~4秒
 
 **原型**
 
-```
-public void setTimeOut(int timeOut)
+```java
+public void setTimeOut(long timeOut)
 ```
 
 ###2.5.2. 参数说明
@@ -393,73 +416,88 @@ public void setTimeOut(int timeOut)
 
 | 参数    | 类型 | 说明                       |
 | ------- | ---- | -------------------------- |
-| timeOut | int  | 设置超时时间（单位：毫秒） |
+| timeOut | long | 设置超时时间（单位：毫秒） |
 
 **响应参数**
 
 无
 
-## 2.5. 资源界面配置说明
 
-SDK**登录授权页**和**短信验证码页面**部分元素可供开发者编辑，如开发者不需自定义，则使用SDK提供的默认样式，建议开发者按照开发者自定义规则个性化授权页面和短信验证页面：
 
-###2.5.1. 授权登录页面 
+## 2.6. 获取网络状态和运营商类型
 
-![logo](image/auth-page.png)
+### 2.6.1. 方法描述
 
-**注意：开发者不得通过任何技术手段，将授权页面的隐私栏、品牌露出内容隐藏、覆盖，对于接入移动认证SDK并上线的应用，我方会对上线的应用授权页面做审查，如果有出现未按要求设计授权页面，将隐私栏、品牌等UI隐去不可见的设计，我方有权将应用的登录功能下线。**
+本方法用于获取用户当前的网络环境和运营商
 
-### 2.5.3. 开发者自定义控件
-
-开发者可以在布局文件`umcsdk_login_authority.xml`、`umcsdk_oauth.xml`、`umcsdk_oauth.xml`中添加控件并添加事件，并为添加的控件绑定事件代码：</br>
+**原型**
 
 ```java
-private RegistListener registListener;
-registListener = RegistListener.getInstance();
-registListener.add("test_tv", new CustomInterface() {
+public void getNetworkType(Context context,
+                           TokenListener listener)
+```
+
+### 2.6.2. 参数说明
+
+**请求参数**
+
+| 参数     | 类型          | 说明       |
+| -------- | ------------- | ---------- |
+| context  | Context       | 上下文对象 |
+| listener | TokenListener | 回调       |
+
+**响应参数**
+
+TokenListener的参数JSONObject，含义如下：
+
+| 参数     | 类型   | 说明                                                         |
+| -------- | ------ | ------------------------------------------------------------ |
+| operator | String | 运营商类型：</br> 1.移动流量；</br>2.联通流量网络；</br>3.电信流量网络。 |
+| netType  | String | 网络类型：</br> 0未知；</br>1流量；</br> 2 wifi</br>；3 数据流量+wifi |
+
+### 2.6.3. 示例
+
+```java
+mAuthnHelper.getNetworkType (context, new TokenListener() {
     @Override
-    public void onClick(Context context) {
-        Toast.makeText(mContext, "this is custom view", Toast.LENGTH_SHORT).show();
+	public void onGetTokenComplete(JSONObject jsonobj) {
+	        // do something
     }
-});
-```
-
-其中`registListener.add("test_tv",new CustomInterface(){})`第一个参数为所添加自定义控件的id，第二个参数为这个控件所要绑定的事件。注：此Context为applicationContext。
-
-**PS:授权页面关闭配置：** 
-
-在授权页umcsdk_login_authority.xml中添加自定义控件，id命名为umcskd_authority_finish。 
-
-```java
-<TextView
-android:id="@+id/umcskd_authority_finish"
-android:layout_width="wrap_content"
-android:layout_height="wrap_content"
-android:text="关闭页面"
-android:textColor="#0080cc"
-android:textSize="30sp"/>
-```
-
-通过注册自定义控件的方式添加事件，执行完操作之后如下例子中toast "finish"之后授权页会自动关闭。 
-
-```java
-private RegistListener registListener;
-registListener = RegistListener.getInstance();
-registListener.add("umcskd_authority_finish", new CustomInterface() {
-@Override
-public void onClick(Context context) {
-Toast.makeText(mContext, "finish", Toast.LENGTH_SHORT).show();
 }
-});
+);
 ```
 
-<div STYLE="page-break-after: always;"></div>
+
+
+## 2.7. Debug开关
+
+### 2.7.1. 方法描述
+
+用户打开debug日志开关，默认为关闭状态
+
+**原型**
+
+```java
+public void setDebugMode(boolean isDebug)
+```
+
+### 2.7.2. 参数说明
+
+**请求参数**
+
+| 参数    | 类型    | 说明                      |
+| ------- | ------- | ------------------------- |
+| isDebug | boolean | true时，打开debug日志开关 |
+
+**返回参数**
+
+无
 
 # 3. 平台接口说明
 
 ## 3.1. 获取用户信息接口
 
-业务平台或服务端携带用户授权成功后的token来调用统一认证服务端获取用户手机号码等信息。**注：本接口仅适用于5.3.0及以上版本SDK**
+业务平台或服务端携带用户授权成功后的token来调用统一认证服务端获取用户手机号码等信息。
 
 ### 3.1.1. 业务流程
 
@@ -475,7 +513,7 @@ SDK在获取token过程中，用户手机必须在打开数据网络情况下才
 
 **请求方法：** POST+json,Content-type设置为application/json
 
-**回调地址：**请参考开发者接入流程文档
+**注意：开发者需到开发者社区填写服务端出口IP地址后才能正常使用**
 
 </br>
 
