@@ -225,27 +225,14 @@ public void loginAuth(Activity activity,
 LoginCallback认证回调接口：
 
 ```java
-public interface LoginCallback {
+public interface LoginCallbackListener extends TokenListener{
 
     /**
-     * 设置点击授权按钮事件监听器
+     * 设置登录视图的点击事件监听器
      *
+     * @param listener 监听器
      */
     void setLoginViewClickedListener(View.OnClickListener listener);
-    
-
-    /**
-     * 授权登录成功
-     *
-     */
-    void loginSuccess(String token, JSONObject responseData);
-
-    
-    /**
-     * 授权登录失败
-     *
-     */
-    void loginError(int errorCode, String errorMsg, JSONObject responseData);
 
 }
 ```
@@ -269,25 +256,35 @@ LoginCallback的参数JSONObject，含义如下：
 **请求示例代码**
 
 ```java
-mAuthnHelper.loginAuth(activity, APP_ID, APP_KEY, new LoginCallback() {
-@Override
-    public void setLoginViewClickedListener(View.OnClickListener listener) {
-        // do something
+public class LoginActivity extends Activity implements LoginCallbackListener{
+    @Override
+    public void setLoginViewClickedListener(final View.OnClickListener listener) {
+        //登录操作执行获取token事件（示例代码仅做参考）
+        btnLogin.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                listener.onClick(v);
+            }
+        });
     }
 
-
     @Override
-	public void loginSuccess(String token, JSONObject responseData) {
-        // do something
-    }
-
-    
-    @Override
-    public void loginError(int errorCode, String errorMsg, JSONObject responseData) 	{
-        // do something
+    public void onGetTokenComplete(JSONObject jsonobj) {
+        //返回token的回调（示例代码仅做参考）
+        if (jsonobj != null) {
+            toast(jsonobj.toString());
+            if (jsonobj.has("token")){
+                String mAccessToken = jsonobj.optString("token");
+                Intent intent=new Intent();
+                intent.putExtra("token",mAccessToken);
+                setResult(MainActivity.LOGINACTIVITY_RESPONE_CODE,intent);
+                finish();
+            }else {
+                finish();
+            }
+        }
     }
 }
-);
 ```
 
 **响应示例代码**
