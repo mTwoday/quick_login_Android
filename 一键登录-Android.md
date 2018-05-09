@@ -82,6 +82,10 @@ mAuthnHelper.getTokenExp(Constant.APP_ID, Constant.APP_KEY,
                  AuthnHelper.AUTH_TYPE_DYNAMIC_SMS + AuthnHelper.AUTH_TYPE_SMS, mListener);
 ```
 
+```java
+mAuthnHelper.getTokenImp(Constant.APP_ID, Constant.APP_KEY,mListener);
+```
+
 <div STYLE="page-break-after: always;"></div>
 
 # 2. SDK方法说明
