@@ -206,7 +206,7 @@ mAuthnHelper.getPhoneInfo(APP_ID, APP_KEY, new TokenListener() {
 public void loginAuth(Activity activity, 
                       String appId, 
                       String appKey, 
-                      @NonNull LoginCallback callback)
+                      @NonNull LoginCallbackListener callback)
 ```
 
 </br>
@@ -220,9 +220,9 @@ public void loginAuth(Activity activity,
 | appId    | String        | 应用的AppID                                   |
 | appkey   | String        | 应用密钥                                      |
 | activity | Activity      | 授权页面，由开发者完成页面的设计布局          |
-| callback | LoginCallback | LoginCallback认证回调接口，需要调用者自己实现 |
+| callback | LoginCallbackListener | LoginCallbackListener认证回调接口，需要调用者自己实现 |
 
-LoginCallback认证回调接口：
+LoginCallbackListener：
 
 ```java
 public interface LoginCallbackListener extends TokenListener{
