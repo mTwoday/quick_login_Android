@@ -19,7 +19,6 @@ sdk技术问题沟通QQ群：609994083</br>
 
 1. 将`quick_login_android_**.jar`拷贝到应用工程的libs目录下，如没有该目录，可新建；
 2. 将sdk所需要的证书文件`clientCert.crt`、`serverPublicKey.pem`从提供的demo工程拷贝到项目`assets`目录下。
-3. 将sdk所需要的资源文件（anim, drawable, drawable-xxhdpi, layout, values文件，具体可参考demo工程）从res目录下的文件添加到项目工程中
 
 </br>
 
@@ -34,40 +33,11 @@ sdk技术问题沟通QQ群：609994083</br>
 <uses-permission android:name="android.permission.READ_PHONE_STATE" />
 <uses-permission android:name="android.permission.ACCESS_WIFI_STATE" />
 <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
-<uses-permission android:name="android.permission.SEND_SMS" />
 <uses-permission android:name="android.permission.CHANGE_NETWORK_STATE" />
 <uses-permission android:name="android.permission.WRITE_SETTINGS"/>
 ```
 
-**2. 配置授权登录activity**
-
-开发者根据需要配置横竖屏方向：`android:screenOrientation`
-示列代码为`unspecified`（默认值由系统选择显示方向）
-
-```java
-<activity
-    android:name="com.cmic.sso.sdk.activity.OAuthActivity"
-    android:configChanges="orientation|keyboardHidden|screenSize"
-    android:screenOrientation="unspecified"
-    android:launchMode="singleTop">
-</activity>
-<!-- required -->
-<activity
-    android:name="com.cmic.sso.sdk.activity.BufferActivity"
-    android:configChanges="orientation|keyboardHidden|screenSize"
-    android:screenOrientation="unspecified"
-    android:launchMode="singleTop">
-</activity>
-<!-- required -->
-<activity
-    android:name="com.cmic.sso.sdk.activity.LoginAuthActivity"
-    android:configChanges="orientation|keyboardHidden|screenSize"
-    android:screenOrientation="unspecified"
-    android:launchMode="singleTop">
-</activity>
-```
-
-通过以上两个步骤，工程就已经配置完成了。接下来就可以在代码里使用统一认证的SDK进行开发了
+通过以上步骤，工程就已经配置完成了。接下来就可以在代码里使用统一认证的SDK进行开发了
 
 </br>
 
@@ -110,6 +80,10 @@ mListener = new TokenListener() {
 ```java
 mAuthnHelper.getTokenExp(Constant.APP_ID, Constant.APP_KEY,
                  AuthnHelper.AUTH_TYPE_DYNAMIC_SMS + AuthnHelper.AUTH_TYPE_SMS, mListener);
+```
+
+```java
+mAuthnHelper.getTokenImp(Constant.APP_ID, Constant.APP_KEY,mListener);
 ```
 
 <div STYLE="page-break-after: always;"></div>
@@ -251,27 +225,14 @@ public void loginAuth(Activity activity,
 LoginCallback认证回调接口：
 
 ```java
-public interface LoginCallback {
+public interface LoginCallbackListener extends TokenListener{
 
     /**
-     * 设置点击授权按钮事件监听器
+     * 设置登录视图的点击事件监听器
      *
+     * @param listener 监听器
      */
     void setLoginViewClickedListener(View.OnClickListener listener);
-    
-
-    /**
-     * 授权登录成功
-     *
-     */
-    void loginSuccess(String token, JSONObject responseData);
-
-    
-    /**
-     * 授权登录失败
-     *
-     */
-    void loginError(int errorCode, String errorMsg, JSONObject responseData);
 
 }
 ```
@@ -295,25 +256,35 @@ LoginCallback的参数JSONObject，含义如下：
 **请求示例代码**
 
 ```java
-mAuthnHelper.loginAuth(activity, APP_ID, APP_KEY, new LoginCallback() {
-@Override
-    public void setLoginViewClickedListener(View.OnClickListener listener) {
-        // do something
+public class LoginActivity extends Activity implements LoginCallbackListener{
+    @Override
+    public void setLoginViewClickedListener(final View.OnClickListener listener) {
+        //登录操作执行获取token事件（示例代码仅做参考）
+        btnLogin.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                listener.onClick(v);
+            }
+        });
     }
 
-
     @Override
-	public void loginSuccess(String token, JSONObject responseData) {
-        // do something
-    }
-
-    
-    @Override
-    public void loginError(int errorCode, String errorMsg, JSONObject responseData) 	{
-        // do something
+    public void onGetTokenComplete(JSONObject jsonobj) {
+        //返回token的回调（示例代码仅做参考）
+        if (jsonobj != null) {
+            toast(jsonobj.toString());
+            if (jsonobj.has("token")){
+                String mAccessToken = jsonobj.optString("token");
+                Intent intent=new Intent();
+                intent.putExtra("token",mAccessToken);
+                setResult(MainActivity.LOGINACTIVITY_RESPONE_CODE,intent);
+                finish();
+            }else {
+                finish();
+            }
+        }
     }
 }
-);
 ```
 
 **响应示例代码**
