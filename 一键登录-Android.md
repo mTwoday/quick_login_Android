@@ -220,9 +220,9 @@ mAuthnHelper.getPhoneInfo(APP_ID, APP_KEY, new TokenListener() {
 
 本方法用于实现包括：
 
-1. 加载应用提供的授权页面activity；
-2. 用户点击授权登录后的实现逻辑；
-3. 授权返回结果
+1. 加载应用定制的授权页面activity；
+2. 用户点击授权登录按钮后的实现逻辑；
+3. 用户点击登录授权后返回取号凭证等参数
 
 </br>
 
