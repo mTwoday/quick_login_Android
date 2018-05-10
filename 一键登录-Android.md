@@ -79,8 +79,8 @@ mListener = new TokenListener() {
 **3. 接口调用**
 
 ```java
-mAuthnHelper.getTokenExp(Constant.APP_ID, Constant.APP_KEY,
-                 AuthnHelper.AUTH_TYPE_DYNAMIC_SMS + AuthnHelper.AUTH_TYPE_SMS, mListener);
+//this 为activity对象
+mAuthnHelper.getTokenExp(this, Constant.APP_ID, Constant.APP_KEY, mListener);
 ```
 
 ```java
