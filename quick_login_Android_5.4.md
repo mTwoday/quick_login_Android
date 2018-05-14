@@ -507,9 +507,9 @@ AuthnHelper.getInstance(this).getTokenSms(phoneNum, authCode, new TokenListener(
 
 ### 3.1.1. 业务流程
 
-SDK在获取token过程中，用户手机必须在打开数据网络情况下才能获取成功，纯wifi环境下会自动跳转到SDK的短信验证码页面（如果有配置）或者返回错误码
+SDK在获取token过程中，用户手机必须在打开数据网络情况下才能获取成功，纯wifi环境下会走短信上行获取token（如果有配置）或者返回错误码
 
-![img](file://C:\Users\tonyl\Desktop\541\image\19.png?lastModify=1519719216)
+
 
 ### 3.1.2. 接口说明
 
