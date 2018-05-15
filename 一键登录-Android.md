@@ -10,9 +10,9 @@ sdk技术问题沟通QQ群：609994083</br>
 
     b. 调用取号方法；</br>
 
-    c. 应用构建授权页面activity；
+    c. 应用根据`中国移动认证授权页面规范`，构建授权activity并弹出页面；
 
-    c. 调用显式登录方法并传入授权页面activity，获得token。</br>
+    d. 用户点击授权后，调用授权登录方法并传入授权页面activity，应用获取token。</br>
 
 2. 在业务服务端调用`获取用户信息接口`或`本机号码校验接口`获取相关用户信息</br>
 
@@ -40,9 +40,11 @@ sdk技术问题沟通QQ群：609994083</br>
 
 通过以上步骤，工程就已经配置完成了。接下来就可以在代码里使用统一认证的SDK进行开发了
 
+**注意：在调用`取号`或`授权登录`方法时，需提前申请`READ_PHONE_STATE`，否则会报错**
+
 </br>
 
-## 1.4. SDK使用步骤
+## 1.4. SDK使用步骤时
 
 **1. 创建一个AuthnHelper实例** 
 
@@ -121,11 +123,11 @@ public static AuthnHelper getInstance(Context context)
 
 **功能**
 
-本方法用于发起取号请求，并返回用户当前网络环境是否具备取号条件。SDK将在后台完成网络判断、数据网络切换等内部操作并向网关请求申请获取用户本机号码。取号请求成功后，开发者就可以调用并弹出由开发者自定义布局的授权页面。**注意：取号请求前，开发者需提前申请`READ_PHONE_STATE`权限，否则取号会失败！**
+本方法用于发起取号请求，并返回用户当前网络环境是否具备取号条件的结果。SDK将在后台完成网络判断、数据网络切换等内部操作并向网关请求申请获取用户本机号码。取号请求成功后，开发者就可以调用并弹出由开发者自定义布局的授权页面。**注意：取号请求前，开发者需提前申请`READ_PHONE_STATE`权限，否则取号会失败！**
 
 **调用建议**
 
-建议开发者在用户打开应用时调用本方法，有助于提升登录的成功率和用户登录体验。
+建议开发者在应用开启时调用本方法，有助于提升登录的成功率和用户登录体验。
 
 </br>
 
@@ -168,13 +170,28 @@ OnGetTokenComplete的参数JSONObject，含义如下：
 **请求示例代码**
 
 ```java
-mAuthnHelper.getPhoneInfo(APP_ID, APP_KEY, new TokenListener() {
-    @Override
-    public void onGetTokenComplete(JSONObject jsonobj) {
-        // do something
+/***
+判断和获取READ_PHONE_STATE权限逻辑
+***/   
+
+//创建AuthnHelper实例
+public void onCreate(Bundle savedInstanceState) {
+    super.onCreate(savedInstanceState);
+    mContext = this;    
+    ……
+    mAuthnHelper = AuthnHelper.getInstance(mContext);
     }
-}
-);
+
+//实现取号回调
+mListener = new TokenListener() {
+    @Override
+    public void onGetTokenComplete(JSONObject jObj) {
+        …………	// 应用接收到回调后的处理逻辑
+    }
+};
+
+//调用取号方法
+mAuthnHelper.getPhoneInfo(APP_ID, APP_KEY, mListener);
 ```
 
 **响应示例代码**
@@ -187,27 +204,23 @@ mAuthnHelper.getPhoneInfo(APP_ID, APP_KEY, new TokenListener() {
 }
 ```
 
-## 2.3. 显式登录
+## 2.3. 授权登录
 
 ### 2.3.1. 方法描述
 
 **功能**
 
-本方法用于实现包括：
-
-1. 加载应用定制的授权页面activity；
-2. 用户点击授权登录按钮后的实现逻辑；
-3. 用户点击登录授权后返回取号凭证等参数
+在应用弹出授权页的情况下，调用本方法可以成功获取取号凭证token。如果开发者需要**获取用户完整的手机号码**，调用该方法时，需要将正在运行的授权页面activity传入并获取相对应的token；如果开发者需要做**本机号码校验**，调用该方法时，activity参数传null即可。
 
 </br>
 
 **原型**
 
 ```java
-public void loginAuth(Activity activity, 
-                      String appId, 
-                      String appKey, 
-                      @NonNull LoginCallbackListener callback)
+public void loginAuth(final Activity activity, 
+                      final String appId, 
+                      final String appKey, 
+                      final TokenListener listener)
 ```
 
 </br>
@@ -220,35 +233,22 @@ public void loginAuth(Activity activity,
 | :------- | :------------ | :-------------------------------------------- |
 | appId    | String        | 应用的AppID                                   |
 | appkey   | String        | 应用密钥                                      |
-| activity | Activity      | 授权页面，由开发者完成页面的设计布局          |
-| callback | LoginCallbackListener | LoginCallbackListener认证回调接口，需要调用者自己实现 |
-
-LoginCallbackListener：
-
-```java
-public interface LoginCallbackListener extends TokenListener{
-
-    /**
-     * 设置登录视图的点击事件监听器
-     *
-     * @param listener 监听器
-     */
-    void setLoginViewClickedListener(View.OnClickListener listener);
-
-}
-```
+| activity | Activity      | 授权页面，由开发者完成页面的设计布局。**当activity传值为null时，将不弹出授权页，登录方式为隐式登录** |
+| listener | TokenListener | 认证回调接口，需要调用者自己实现 |
 
 </br>
 
 **响应参数**
 
-LoginCallback的参数JSONObject，含义如下：
+TokenListener的参数JSONObject，含义如下：
 
-| 字段       | 类型   | 含义                                                         |
-| ---------- | ------ | ------------------------------------------------------------ |
-| resultCode | String | 接口返回码，“103000”为成功。具体响应码见4.1 SDK返回码        |
-| token      | String | 成功时返回：临时凭证，token有效期2min，一次有效；同一用户（手机号）10分钟内获取token且未使用的数量不超过30个 |
-| openId     | String | 成功时返回：用户身份唯一标识                                 |
+| 字段        | 类型   | 含义                                                         |
+| ----------- | ------ | ------------------------------------------------------------ |
+| resultCode  | String | 接口返回码，“103000”为成功。具体响应码见4.1 SDK返回码        |
+| authType    | String | 登录方式：1：WIFI下网关鉴权</br>2：网关鉴权</br>3：其他      |
+| authTypeDes | String | 登录方式描述                                                 |
+| token       | String | 成功时返回：临时凭证，token有效期2min，一次有效；同一用户（手机号）10分钟内获取token且未使用的数量不超过30个 |
+| openId      | String | 成功时返回：用户身份唯一标识。（activity传入null时，不返回） |
 
 </br>
 
@@ -257,34 +257,42 @@ LoginCallback的参数JSONObject，含义如下：
 **请求示例代码**
 
 ```java
-public class LoginActivity extends Activity implements LoginCallbackListener{
-    @Override
-    public void setLoginViewClickedListener(final View.OnClickListener listener) {
-        //登录操作执行获取token事件（示例代码仅做参考）
-        btnLogin.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
-                listener.onClick(v);
-            }
-        });
+// 在调用取号方法getPhoneInfo并返回正确成功时，可以提前知道网络是否可取号并获取到手机号掩码；
+// 在弹出授权页前不调用getPhoneInfo方法，无法获取手机号掩码，用户点击授权登录可能会失败
+
+
+//创建AuthnHelper实例
+public void onCreate(Bundle savedInstanceState) {
+    super.onCreate(savedInstanceState);
+    mContext = this;    
+    ……
+    mAuthnHelper = AuthnHelper.getInstance(mContext);
     }
 
+//实现回调
+mListener = new TokenListener() {
     @Override
-    public void onGetTokenComplete(JSONObject jsonobj) {
-        //返回token的回调（示例代码仅做参考）
-        if (jsonobj != null) {
-            toast(jsonobj.toString());
-            if (jsonobj.has("token")){
-                String mAccessToken = jsonobj.optString("token");
-                Intent intent=new Intent();
-                intent.putExtra("token",mAccessToken);
-                setResult(MainActivity.LOGINACTIVITY_RESPONE_CODE,intent);
-                finish();
-            }else {
-                finish();
-            }
-        }
+    public void onGetTokenComplete(JSONObject jObj) {
+        …………	// 应用接收到回调后的处理逻辑
     }
+};
+
+/***
+1. 应用构造activity页面逻辑
+2. 应用弹出授权页面activity逻辑
+***/
+
+//用户点击授权按钮时，调用loginAuth方法，获取token
+private void Login() {
+    
+/***
+（调用loginAuth方法前，如果还未获取到READ_PHONE_STATE权限，需提前申请）
+判断和获取READ_PHONE_STATE权限逻辑
+***/   
+        
+//调用授权登录，传入应用定义的activity（授权页面） 
+    mAuthnHelper.loginAuth(activity, Constant.APP_ID, Constant.APP_KEY, mListener);
+    ……
 }
 ```
 
@@ -292,9 +300,10 @@ public class LoginActivity extends Activity implements LoginCallbackListener{
 
 ```
 {
-	"resultcode": "103000",
-    "token": "STsid0000001512438403572hxxxxgBwiYc9fIwxxxxdI4X3GMkI5UVw", 
-    "openId": "003Jxxxx1rmApSg6yG0ydxxxWZ4Bnx0rb4wtWxxxxxc0WAWoAxxx"
+	"resultCode": "103000",
+	"authType": "0",
+	"authTypeDes": "其他",
+	"token": "STsid0000001526349949452XU2gWQFcgWnoMmwwbK7ijolJcsQsH1Ws",
 }
 ```
 
@@ -304,67 +313,33 @@ public class LoginActivity extends Activity implements LoginCallbackListener{
 
 ### 2.4.1. 方法描述
 
-**功能**
-
-本方法目前只能用于实现**本机号码校验**功能。开发者通过隐式登录方法，无授权弹窗，可获取到token和openID（需在开放平台勾选相关能力），应用服务端凭token向SDK服务端请求校验是否本机号码。隐式取号失败后，不支持短信上行和短信验证码二次验证。注：隐式登录返回的token无法通过`获取用户信息接口`换取手机号码，只支持通过`本机号码校验接口`校验用户手机号码身份，否则会报错。**注意：隐式登录前，开发者需提前申请`READ_PHONE_STATE`权限，否则会失败！**
-
-</br>
-
-**原型**
+本SDK不再单独提供隐式登录方法，开发者如果需要使用本SDK实现隐式登录做本机号码校验，在调用显式登录方法时，将activity对象传入值设为null即可，具体可参考下述代码来实现：
 
 ```java
-public void getTokenImp(final String appId,
-                        final String appKey,
-                        final TokenListener listener)
-```
-
-</br>
-
-### 2.4.2. 参数说明
-
-**请求参数**
-
-| 参数       | 类型            | 说明                                       |
-| :------- | :------------ | :--------------------------------------- |
-| appId    | String        | 应用的AppID                                 |
-| appkey   | String        | 应用密钥                                     |
-| listener | TokenListener | TokenListener为回调监听器，是一个java接口，需要调用者自己实现；TokenListener是接口中的认证登录token回调接口，OnGetTokenComplete是该接口中唯一的抽象方法，即void OnGetTokenComplete(JSONObject  jsonobj) |
-
-</br>
-
-**响应参数**
-
-OnGetTokenComplete的参数JSONObject，含义如下：
-
-| 字段       | 类型   | 含义                                                         |
-| ---------- | ------ | ------------------------------------------------------------ |
-| resultCode | Int    | 接口返回码，“103000”为成功。具体响应码见4.1 SDK返回码        |
-| openId     | String | 用户身份唯一标识                                             |
-| token      | String | 成功返回:临时凭证，token有效期2min，一次有效，同一用户（手机号）10分钟内获取token且未使用的数量不超过30个 |
-
-</br>
-
-### 2.4.3. 示例
-
-**请求示例代码**
-
-```java
-mAuthnHelper.getTokenImp(APP_ID, APP_KEY, new TokenListener() {
-    @Override
-    public void onGetTokenComplete(JSONObject jsonobj) {
-        // do something
-    }
+//创建AuthnHelper实例
+public void onCreate(Bundle savedInstanceState) {
+    super.onCreate(savedInstanceState);
+    mContext = this;    
+    ……
+    mAuthnHelper = AuthnHelper.getInstance(mContext);
 }
-);
-```
 
-**响应示例代码**
+//实现回调
+mListener = new TokenListener() {
+    @Override
+    public void onGetTokenComplete(JSONObject jObj) {
+        …………		// 应用接收到回调后的处理逻辑
+    }
+};
 
-```
-{
-    "resultCode": "103000",
-    "openId": "003JI1xxxxxApSg6yG0xxxxxxZ4Bnx0rb4wtWLtyDRc0WAWoAUmE",
-    "token": "STsid0000001512438403572hQSEygBwiYc9fIw0vExdI4X3GMkI5UVw"
+//实现隐式登录获取token
+private void implicitLogin() {
+
+    
+    
+//调用授权登录，activity传null    
+    mAuthnHelper.loginAuth(null, Constant.APP_ID, Constant.APP_KEY, mListener);
+    ……
 }
 ```
 
@@ -464,6 +439,10 @@ public void setDebugMode(boolean isDebug)
 **返回参数**
 
 无
+
+## 2.8. 授权页规范
+
+移动认证一键登录产品由于需要将用户的手机号码信息给到应用方，为了保证用户的知情权，不允许在用户不知情的情况下侵犯用户的个人隐私，同时，为了保证能力提供方的权利与义务，应用在做授权登录操作获取取号凭证前，必须先弹出授权页，告知用户当前操作会将用户的本机号码信息传递给应用。
 
 # 3. 平台接口说明
 
