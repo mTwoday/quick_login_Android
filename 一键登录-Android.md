@@ -81,13 +81,7 @@ mListener = new TokenListener() {
 
 **3. 接口调用**
 
-```java
-loginAuth(final Activity activity, final String appId, final String appKey, final TokenListener listener)
-```
-
-```java
-public void getPhoneInfo(final String appId, final String appKey, final TokenListener listener)
-```
+根据业务需求，调用取号方法`getPhoneInfo`和授权登录方法`loginAuth`。
 
 <div STYLE="page-break-after: always;"></div>
 
@@ -417,39 +411,15 @@ mAuthnHelper.getNetworkType (context, new TokenListener() {
 
 
 
-## 2.7. Debug开关
+## 2.7. 授权页规范
 
-### 2.7.1. 方法描述
+移动认证一键登录产品由于需要将用户的手机号码信息返回给应用方，为了保证用户的知情权，不允许在用户不知情的情况下侵犯用户的个人隐私，同时，为了保证能力提供方的权利与义务，应用在做授权登录操作获取取号凭证前，必须先弹出授权页，告知用户当前操作会将用户的本机号码信息传递给应用。其中，该授权页是由开发者设计、布局、生成、弹出和消失，但必须按照移动认证授权页规范设计。
 
-用户打开debug日志开关，默认为关闭状态
-
-**原型**
-
-```java
-public void setDebugMode(boolean isDebug)
-```
-
-### 2.7.2. 参数说明
-
-**请求参数**
-
-| 参数    | 类型    | 说明                      |
-| ------- | ------- | ------------------------- |
-| isDebug | boolean | true时，打开debug日志开关 |
-
-**返回参数**
-
-无
-
-## 2.8. 授权页规范
-
-移动认证一键登录产品由于需要将用户的手机号码信息返回给应用方，为了保证用户的知情权，不允许在用户不知情的情况下侵犯用户的个人隐私，同时，为了保证能力提供方的权利与义务，应用在做授权登录操作获取取号凭证前，必须先弹出授权页，告知用户当前操作会将用户的本机号码信息传递给应用。
-
-###2.8.1. 调用逻辑
+###2.7.1. 调用逻辑
 
 ![](image/authPage.png)
 
-### 2.8.2. 页面规范细则
+### 2.7.2. 页面规范细则
 
 1、页面必须包含登录按钮，授权登录方法`loginAuth`必须通过触发该按钮时调用；
 
