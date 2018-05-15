@@ -36,6 +36,7 @@ sdk技术问题沟通QQ群：609994083</br>
 <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
 <uses-permission android:name="android.permission.CHANGE_NETWORK_STATE" />
 <uses-permission android:name="android.permission.WRITE_SETTINGS"/>
+<uses-permission android:name="android.permission.GET_TASKS"/>
 ```
 
 通过以上步骤，工程就已经配置完成了。接下来就可以在代码里使用统一认证的SDK进行开发了
@@ -81,12 +82,11 @@ mListener = new TokenListener() {
 **3. 接口调用**
 
 ```java
-//this 为activity对象
-mAuthnHelper.getTokenExp(this, Constant.APP_ID, Constant.APP_KEY, mListener);
+loginAuth(final Activity activity, final String appId, final String appKey, final TokenListener listener)
 ```
 
 ```java
-mAuthnHelper.getTokenImp(Constant.APP_ID, Constant.APP_KEY,mListener);
+public void getPhoneInfo(final String appId, final String appKey, final TokenListener listener)
 ```
 
 <div STYLE="page-break-after: always;"></div>
@@ -707,6 +707,7 @@ SDK在获取token过程中，用户手机必须在打开数据网络情况下才
 | 200038	| 电信重定向失败|
 | 200039	| 电信取号接口返回失败|
 | 200040	| UI资源加载异常|
+| 200042	| 授权页弹出异常 |
 </br>
 
 ##4.2. 获取用户信息接口返回码
