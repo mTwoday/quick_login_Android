@@ -17,7 +17,6 @@ sdk技术问题沟通QQ群：609994083</br>
 
 1. 将`quick_login_android_**.jar`拷贝到应用工程的libs目录下，如没有该目录，可新建；
 2. 将sdk所需要的证书文件`clientCert.crt`、`serverPublicKey.pem`拷贝到项目`assets`目录下。
-3. 将sdk所需要的各个处理器芯片so库文件`libkh.so`连带目录拷贝到工程 jniLibs目录下如：`\jniLibs\arm64-v8a\libkh.so`，如没有该目录，可新建。
 
 </br>
 
