@@ -18,8 +18,6 @@ sdk技术问题沟通QQ群：609994083</br>
 1. 将`quick_login_android_**.jar`,拷贝到应用工程的libs目录下，如没有该目录，可新建；
 2. 将sdk所需要的证书文件`clientCert.crt`、`serverPublicKey.pem`拷贝到项目`assets`目录下。
 
-</br>
-
 ## 1.3. 配置AndroidManifest
 
 注意：为避免出错，请直接从Demo中复制带<!-- required -->标签的代码
@@ -83,8 +81,6 @@ mListener = new TokenListener() {
 ```java
 mAuthnHelper.getTokenImp(mLoginType, AuthnHelper.AUTH_TYPE_SMS, mListener);
 ```
-
-<div STYLE="page-break-after: always;"></div>
 
 # 2. SDK方法说明
 
