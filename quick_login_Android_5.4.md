@@ -79,7 +79,7 @@ mListener = new TokenListener() {
 **3. 接口调用**
 
 ```java
-mAuthnHelper.getTokenImp(mLoginType, AuthnHelper.AUTH_TYPE_SMS, mListener);
+mAuthnHelper.getTokenImp(mLoginType, AuthnHelper.AUTH_TYPE_WAP, mListener);
 ```
 
 # 2. SDK方法说明
