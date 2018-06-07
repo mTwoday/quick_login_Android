@@ -39,29 +39,6 @@ jar包集成方式：
 
 1. 在Eclipse/AS中建立你的工程。 
 2. 将`*.jar`拷贝到工程的libs目录下，如没有该目录，可新建。
-3. 将sdk所需要的证书文件`clientCert.crt`、`serverPublicKey.pem`从提供的demo工程拷贝到项目`assets`目录下。
-
-aar包集成方式：
-
-1. 在AS中建立你的工程。 
-
-2. 将aar文件拷贝到工程的libs目录下，如没有该目录，可新建。
-
-3. 在在build.gradle文件中，添加如下依赖即可： 
-
-   ```java
-   repositories {
-       flatDir {
-           dirs 'libs'
-       }
-   }
-   dependencies {
-       ……
-       //name:'**',**填写开发者要使用的aar包名
-       implementation(name:'quick_login_android_9.0.1', ext:'aar')
-       ……
-   }
-   ```
 
 
 **第三步：开始使用移动认证SDK**
@@ -141,7 +118,7 @@ mListener = new TokenListener() {
 整体流程为：
 
 1. 开发者调用取号方法，取号成功后，SDK将缓存取号临时凭证scrip；
-2. 开发者创建授权页activity；
+2. 开发者继承UAAuthActivity父类并创建授权页面。
 3. 用户同意应用获取本机号码，调用授权登录方法，获取接口调用凭证token；
 4. 携带token进行接口调用，获取用户的手机号码信息。
 
@@ -254,16 +231,33 @@ OnGetTokenComplete的参数JSONObject，含义如下：
 
 7、对于未遵照1~4设计要求，或通过技术手段故意屏蔽不弹出授权页面但获得调用接口凭证token的行为，移动有权将APP所有一键登录相关的能力下架，待整改后再重新上架服务。
 
+### 2.4.3. 构建授权页面
+
+授权登录页面由开发者设计和构建，在构建前，需继承SDK自有的授权页父类UAAuthActivity。
+
+开发者继承SDK提供的父类UAAuthActivity创建自定义的授权页子类LoginActivity，并在该activity中实现开发者业务。
+示例代码如下：
+
+```java
+//继承UAAuthActivity构建用户自定义授权页面
+public class LoginActivity extends UAAuthActivity implements TokenListener {
+
+//实现授权页页面设计、布局、动画
+//调用取号、授权等逻辑 
+    
+    }
+```
+
 ## 2.5. 授权并获取接口凭证
 
 开发者完成2.3和2.4的逻辑后，确保临时取号凭证scrip有效，并且用户点击同意授权登录后，开发者可以调用授权方法，获取接口凭证token。为了保证scrip的有效性，建议开发者在调用授权登录方法前，再次调用取号方法。（如果scrip有效，再次调用取号方法的耗时非常少）
 
-在调用授权方法时，必须将2.4中开发者创建的授权页activity传入到本方法中，且需要保证activity正在内存运行中，否则取号失败，错误码200042。
+在调用授权方法时，必须将2.4中开发者创建的授权页传入到本方法中，且需要保证授权页正在内存运行中，否则取号失败，错误码200042。
 
 **请求示例代码：**
 
 ```java
-//1.调用取号方法getPhoneInfo，确保取号成功。
+//1.调用取号方法getPhoneInfo
 
 //2.实现回调
 mListener = new TokenListener() {
@@ -274,18 +268,18 @@ mListener = new TokenListener() {
 };
 
 /***
-//3.应用创建授权页activity并拉起页面
+//3.构建授权页面uaAuthactivity并拉起授权页
 ***/
 
-//4.用户点击授权按钮时，调用loginAuth方法，传入应用定义的activity，获取token
-    mAuthnHelper.loginAuth(activity, Constant.APP_ID, Constant.APP_KEY, mListener);
+//4.用户点击授权按钮时，调用loginAuth方法，传入应用定义的uaAuthactivity，获取token
+    mAuthnHelper.loginAuth(uaAuthactivity, Constant.APP_ID, Constant.APP_KEY, mListener);
     ……
 ```
 
 **授权方法原型：**
 
 ```java
-public void loginAuth(final Activity activity, 
+public void loginAuth(final UAAuthActivity uaAuthActivity, 
                       final String appId, 
                       final String appKey, 
                       final TokenListener listener)
@@ -293,12 +287,12 @@ public void loginAuth(final Activity activity,
 
 **参数说明：**
 
-| 参数     | 类型          | 说明                                                         |
-| :------- | :------------ | :----------------------------------------------------------- |
-| appId    | String        | 应用的AppID                                                  |
-| appkey   | String        | 应用密钥                                                     |
-| activity | Activity      | 授权页面，由开发者完成页面的设计布局。当activity传值为nil时，获取的token用于本机号码校验 |
-| listener | TokenListener | TokenListener为回调监听器，是一个java接口，需要调用者自己实现；TokenListener是接口中的认证登录token回调接口，OnGetTokenComplete是该接口中唯一的抽象方法，即void OnGetTokenComplete(JSONObject  jsonobj) |
+| 参数           | 类型           | 说明                                                         |
+| :------------- | :------------- | :----------------------------------------------------------- |
+| appId          | String         | 应用的AppID                                                  |
+| appkey         | String         | 应用密钥                                                     |
+| uaAuthActivity | UAAuthActivity | 授权页面，由开发者完成页面的设计布局。当uaAuthActivity传值为null时，获取的token用于本机号码校验 |
+| listener       | TokenListener  | TokenListener为回调监听器，是一个java接口，需要调用者自己实现；TokenListener是接口中的认证登录token回调接口，OnGetTokenComplete是该接口中唯一的抽象方法，即void OnGetTokenComplete(JSONObject  jsonobj) |
 
 **返回说明：**
 
@@ -310,7 +304,7 @@ TokenListener的参数JSONObject，含义如下：
 | authType    | String | 登录方式：1：WIFI下网关鉴权</br>2：网关鉴权</br>3：其他      |
 | authTypeDes | String | 登录方式描述                                                 |
 | token       | String | 成功时返回：临时凭证，token有效期2min，一次有效；同一用户（手机号）10分钟内获取token且未使用的数量不超过30个 |
-| openId      | String | 成功时返回：用户身份唯一标识。（activity传入null时，不返回） |
+| openId      | String | 成功时返回：用户身份唯一标识。（uaAuthActivity传入null时，不返回） |
 
 ## 2.6. 获取手机号码
 
@@ -333,7 +327,7 @@ TokenListener的参数JSONObject，含义如下：
 
 **请求示例代码：**
 
-```
+```json
 {
     appid = 10000001;
     msgid = 34a5588136d6404784831609cdcdc633;
@@ -471,7 +465,7 @@ OnGetTokenComplete的参数JSONObject，含义如下：
 
 开发者完成3.3逻辑后，确保临时取号凭证scrip有效，调用授权方法，获取接口凭证token。
 
-在调用授权方法时，将activity对象传入值设为null
+在调用授权方法时，将uaAuthActivity对象传入值设为null
 
 **请求示例代码：**
 
@@ -486,7 +480,7 @@ mListener = new TokenListener() {
     }
 };
     
-//3.调用授权登录，activity传null    
+//3.调用授权登录，uaAuthActivity传null    
     mAuthnHelper.loginAuth(null, Constant.APP_ID, Constant.APP_KEY, mListener);
     ……
 ```
@@ -494,7 +488,7 @@ mListener = new TokenListener() {
 **授权方法原型：**
 
 ```java
-public void loginAuth(final Activity activity, 
+public void loginAuth(final UAAuthActivity uaAuthActivity,
                       final String appId, 
                       final String appKey, 
                       final TokenListener listener)
@@ -502,12 +496,12 @@ public void loginAuth(final Activity activity,
 
 **参数说明：**
 
-| 参数     | 类型          | 说明                                                         |
-| :------- | :------------ | :----------------------------------------------------------- |
-| appId    | String        | 应用的AppID                                                  |
-| appkey   | String        | 应用密钥                                                     |
-| activity | Activity      | 授权页面，由开发者完成页面的设计布局。当activity传值为nil时，获取的token用于本机号码校验 |
-| listener | TokenListener | TokenListener为回调监听器，是一个java接口，需要调用者自己实现；TokenListener是接口中的认证登录token回调接口，OnGetTokenComplete是该接口中唯一的抽象方法，即void OnGetTokenComplete(JSONObject  jsonobj) |
+| 参数           | 类型           | 说明                                                         |
+| :------------- | :------------- | :----------------------------------------------------------- |
+| appId          | String         | 应用的AppID                                                  |
+| appkey         | String         | 应用密钥                                                     |
+| uaAuthActivity | UAAuthActivity | 授权页面，由开发者完成页面的设计布局。当uaAuthActivity传值为null时，获取的token用于本机号码校验 |
+| listener       | TokenListener  | TokenListener为回调监听器，是一个java接口，需要调用者自己实现；TokenListener是接口中的认证登录token回调接口，OnGetTokenComplete是该接口中唯一的抽象方法，即void OnGetTokenComplete(JSONObject  jsonobj) |
 
 **返回说明：**
 
@@ -519,7 +513,7 @@ TokenListener的参数JSONObject，含义如下：
 | authType    | String | 登录方式：1：WIFI下网关鉴权</br>2：网关鉴权</br>3：其他      |
 | authTypeDes | String | 登录方式描述                                                 |
 | token       | String | 成功时返回：临时凭证，token有效期2min，一次有效；同一用户（手机号）10分钟内获取token且未使用的数量不超过30个 |
-| openId      | String | 成功时返回：用户身份唯一标识。（activity传入null时，不返回） |
+| openId      | String | 成功时返回：用户身份唯一标识。（uaAuthActivity传入null时，不返回） |
 
 ## 3.5. 客户端交互页面设计
 
@@ -699,14 +693,14 @@ mAuthnHelper.getPhoneInfo(APP_ID, APP_KEY, mListener);
 
 **功能**
 
-在应用弹出授权页的情况下，调用本方法可以成功获取取号凭证token。如果需要**获取用户完整的手机号码**，调用该方法时，需要将正在运行的授权页面activity传入并获取相对应的token；如果需要做**本机号码校验**，调用该方法时，activity参数传null即可。
+在应用弹出授权页的情况下，调用本方法可以成功获取取号凭证token。如果需要**获取用户完整的手机号码**，调用该方法时，需要将正在运行的授权页面uaAuthActivity传入并获取相对应的token；如果需要做**本机号码校验**，调用该方法时，uaAuthActivity参数传null即可。
 
 **注：**若要实现一键登录，必须在授权页的activity中调用本方法，否则会报错
 
 **原型**
 
 ```java
-public void loginAuth(final Activity activity, 
+public void loginAuth(final UAAuthActivity uaAuthActivity, 
                       final String appId, 
                       final String appKey, 
                       final TokenListener listener)
@@ -716,12 +710,12 @@ public void loginAuth(final Activity activity,
 
 **请求参数**
 
-| 参数     | 类型          | 说明                                                         |
-| :------- | :------------ | :----------------------------------------------------------- |
-| appId    | String        | 应用的AppID                                                  |
-| appkey   | String        | 应用密钥                                                     |
-| activity | Activity      | 授权页面，由开发者完成页面的设计布局。当activity传值为nil时，获取的token用于本机号码校验 |
-| listener | TokenListener | TokenListener为回调监听器，是一个java接口，需要调用者自己实现；TokenListener是接口中的认证登录token回调接口，OnGetTokenComplete是该接口中唯一的抽象方法，即void OnGetTokenComplete(JSONObject  jsonobj) |
+| 参数           | 类型           | 说明                                                         |
+| :------------- | :------------- | :----------------------------------------------------------- |
+| appId          | String         | 应用的AppID                                                  |
+| appkey         | String         | 应用密钥                                                     |
+| uaAuthActivity | UAAuthActivity | 授权页面，由开发者完成页面的设计布局。当uaAuthActivity传值为null时，获取的token用于本机号码校验 |
+| listener       | TokenListener  | TokenListener为回调监听器，是一个java接口，需要调用者自己实现；TokenListener是接口中的认证登录token回调接口，OnGetTokenComplete是该接口中唯一的抽象方法，即void OnGetTokenComplete(JSONObject  jsonobj) |
 
 **响应参数**
 
@@ -730,10 +724,10 @@ TokenListener的参数JSONObject，含义如下：
 | 字段        | 类型   | 含义                                                         |
 | ----------- | ------ | ------------------------------------------------------------ |
 | resultCode  | String | 接口返回码，“103000”为成功。                                 |
-| authType    | String | 登录方式：1：WIFI下网关鉴权</br>2：网关鉴权</br>3：其他      |
+| authType    | String | 登录方式：</br>1：WIFI下网关鉴权</br>2：网关鉴权</br>3：其他 |
 | authTypeDes | String | 登录方式描述                                                 |
 | token       | String | 成功时返回：临时凭证，token有效期2min，一次有效；同一用户（手机号）10分钟内获取token且未使用的数量不超过30个 |
-| openId      | String | 成功时返回：用户身份唯一标识。（activity传入null时，不返回） |
+| openId      | String | 成功时返回：用户身份唯一标识。（uaAuthActivity传入null时，不返回） |
 
 </br>
 
@@ -742,7 +736,7 @@ TokenListener的参数JSONObject，含义如下：
 **请求示例代码**
 
 ```java
-//1.调用取号方法getPhoneInfo，确保取号成功。
+//1.调用取号方法getPhoneInfo
 
 //2.实现回调
 mListener = new TokenListener() {
@@ -753,11 +747,11 @@ mListener = new TokenListener() {
 };
 
 /***
-//3.应用创建授权页activity并拉起页面
+//3.构建授权页面uaAuthactivity并拉起授权页
 ***/
 
-//4.用户点击授权按钮时，调用loginAuth方法，传入应用定义的activity，获取token
-    mAuthnHelper.loginAuth(activity, Constant.APP_ID, Constant.APP_KEY, mListener);
+//4.用户点击授权按钮时，调用loginAuth方法，传入应用定义的uaAuthactivity，获取token
+    mAuthnHelper.loginAuth(uaAuthactivity, Constant.APP_ID, Constant.APP_KEY, mListener);
     ……
 ```
 
@@ -772,8 +766,6 @@ mListener = new TokenListener() {
 	“openId":""
 }
 ```
-
-</br>
 
 ## 4.5. 设置取号超时
 
